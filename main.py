@@ -1,4 +1,5 @@
 from decimal import Context
+from itertools import product
 from time import localtime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ConversationHandler, filters, ContextTypes, MessageHandler
@@ -16,6 +17,9 @@ BOT_USERNAME = TELEGRAM_BOT_NAME
 # Define conversation states
 USER_ACTIVITY, PRODUCTIVE_FLAG = range(2)
 
+#Define valid prodictive states 
+productive_states =["productive","neutral","not productive"]
+
 # Entry point: /log
 async def start_logger(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! What have you been working on?")
@@ -29,16 +33,22 @@ async def ask_user_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Step 2: Capture productivity label
 async def verify_productivity(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["productivity"] = update.message.text
+    context.user_data["productivity"] = update.message.text.lower().strip()
     productivity = context.user_data["productivity"]
-    activity = context.user_data["activity"]
 
-    await update.message.reply_text(f"Logged. Activity: {activity}, Productivity: {productivity}. ✅")
+    if productivity not in productive_states:
+        await update.message.reply_text("Please log activity as productive, not productive, or neutral")
+        return PRODUCTIVE_FLAG
+    else:
 
-    #Logs in database
-    post_to_datbase(activity.lower(),productivity.lower())
+        activity = context.user_data["activity"]
 
-    return ConversationHandler.END
+        await update.message.reply_text(f"Logged. Activity: {activity}, Productivity: {productivity}. ✅")
+
+        #Logs in database
+        post_to_datbase(activity.lower(),productivity.lower())
+
+        return ConversationHandler.END
 
 # Fallback: cancel the conversation
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
